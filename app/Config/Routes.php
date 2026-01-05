@@ -1,8 +1,109 @@
 <?php
 
-use CodeIgniter\Router\RouteCollection;
+namespace Config;
 
-/**
- * @var RouteCollection $routes
+use CodeIgniter\Config\Services;
+
+/*
+ * --------------------------------------------------------------------
+ * Route Definitions
+ * --------------------------------------------------------------------
  */
-$routes->get('/', 'Home::index');
+
+$routes = Services::routes();
+
+/*
+ * Default Settings
+ */
+$routes->setDefaultNamespace('App\Controllers');
+$routes->setDefaultController('Lowongan');
+$routes->setDefaultMethod('index');
+$routes->setTranslateURIDashes(false);
+$routes->set404Override();
+$routes->setAutoRoute(false); // WAJIB false (aman & rapi)
+
+/*
+ * --------------------------------------------------------------------
+ * PUBLIC ROUTES (Tanpa Login)
+ * --------------------------------------------------------------------
+ */
+
+// Home / Landing Page
+$routes->get('/', 'Lowongan::index');
+
+// Auth
+$routes->get('/login', 'Auth::login');
+$routes->post('/login', 'Auth::login');
+
+$routes->get('/register', 'Auth::register');
+$routes->post('/register', 'Auth::register');
+
+// Test endpoint
+$routes->post('/test-post', function() {
+    $logger = \Config\Services::logger();
+    $logger->info('TEST ENDPOINT REACHED - POST DATA: ' . json_encode($_POST));
+    echo "POST received and logged!";
+    exit;
+});
+
+$routes->get('/logout', 'Auth::logout');
+
+// Lowongan
+$routes->get('/lowongan', 'Lowongan::index');
+$routes->get('/lowongan/search', 'Lowongan::search');
+$routes->get('/lowongan/detail/(:num)', 'Lowongan::detail/$1');
+
+// Pages
+$routes->get('/about', 'Page::about');
+$routes->get('/contact', 'Page::contact');
+
+/*
+ * --------------------------------------------------------------------
+ * PROTECTED ROUTES (WAJIB LOGIN)
+ * --------------------------------------------------------------------
+ */
+
+// Dashboard (semua role)
+$routes->get('/dashboard', 'Dashboard::index', ['filter' => 'auth']);
+
+/*
+ * --------------------------------------------------------------------
+ * PELAMAR ONLY
+ * --------------------------------------------------------------------
+ */
+$routes->group('pelamar', ['filter' => 'auth:pelamar'], function ($routes) {
+    $routes->post('apply/(:num)', 'Lamaran::apply/$1');
+    $routes->get('profile', 'Pelamar::profile');
+    $routes->post('profile/save', 'Pelamar::save');
+    $routes->post('change-password', 'Pelamar::changePassword');
+    
+    // History & Saved Jobs
+    $routes->get('lamaran', 'Pelamar::lamaran');
+    $routes->get('saved', 'Pelamar::saved');
+    $routes->post('saved/add/(:num)', 'Pelamar::saveJob/$1');
+    $routes->post('delete_saved/(:num)', 'Pelamar::deleteSavedJob/$1');
+    $routes->post('apply/(:num)', 'Pelamar::apply/$1'); // Ensure this matches View form action
+});
+
+/*
+ * --------------------------------------------------------------------
+ * PERUSAHAAN ONLY
+ * --------------------------------------------------------------------
+ */
+$routes->group('perusahaan', ['filter' => 'auth:perusahaan'], function ($routes) {
+    $routes->get('lamaran', 'Perusahaan::lamaranMasuk');
+    $routes->get('review/(:num)', 'Perusahaan::review/$1');
+    $routes->post('lowongan/store', 'Lowongan::store');
+    $routes->get('lowongan/edit/(:num)', 'Lowongan::edit/$1');
+    $routes->post('lowongan/update/(:num)', 'Lowongan::update/$1');
+    $routes->get('profile', 'Perusahaan::profile');
+    $routes->post('profile/save', 'Perusahaan::save');
+    $routes->post('lowongan/close/(:num)', 'Perusahaan::closeLowongan/$1');
+    $routes->post('change-password', 'Perusahaan::changePassword');
+});
+
+/*
+ * --------------------------------------------------------------------
+ * END OF FILE
+ * --------------------------------------------------------------------
+ */
